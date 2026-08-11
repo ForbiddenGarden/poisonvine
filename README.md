@@ -23,9 +23,13 @@ attacker-controlled the moment it leaves someone else's zone. This framework
 reproduces the injection techniques that land, so you can find the gap before
 someone else does.
 
-Every technique here corresponds to a result already validated in prior
+Most techniques here correspond to a result already validated in prior
 independent research, including responsible-disclosure work on the DNS-AID
-agent-discovery protocol.
+agent-discovery protocol. A few are marked **exploratory** in the catalog
+(`pv channels`) — `classic_dns` tracks F/G/H (NAPTR, PTR, and DNSSEC-field
+carriers): same carrier mechanics applied to record types not yet covered by
+that prior research, included to probe the boundary rather than to report a
+confirmed result.
 
 ## What it tests
 
@@ -33,7 +37,7 @@ Three channels, one CLI. Run `pv channels` for the live catalog.
 
 | Channel | What it poisons | Techniques |
 |---|---|---|
-| **`classic_dns`** | TXT (blunt / SPF-mimic / verification-token), subdomain labels (explicit / ambient), CNAME target, SOA RNAME, WHOIS registrant fields | 9 |
+| **`classic_dns`** | TXT (blunt / SPF-mimic / verification-token), subdomain labels (explicit / ambient), CNAME target, SOA RNAME, WHOIS registrant fields, NAPTR regexp/replacement, PTR reverse-DNS targets (explicit / ambient), NSEC next-domain field, DNSSEC trust-signal framing | 15 |
 | **`dns_aid`** | SVCB SvcParams (`policy` / `realm` / `cap`), agent-name labels, SVCB TargetName, capability-doc `description`, DNSSEC trust-signal framing | 10 |
 | **`mcp`** | MCP tool descriptions surfaced by a discovered agent's `tools/list` — the v1–v7 tool-poisoning variants incl. tool-selection hijacking and the codegen-reflex chain | 6 |
 
@@ -155,7 +159,9 @@ simulated WHOIS). The campaign treats both uniformly.
 
 Each channel consolidates a line of prior independent research:
 
-- **`classic_dns`** — DNS/WHOIS records as an injection channel.
+- **`classic_dns`** — DNS/WHOIS records as an injection channel. Tracks F/G/H
+  (NAPTR / PTR / DNSSEC-field carriers) are exploratory extensions of the same
+  mechanics, not drawn from that prior confirmed research.
 - **`dns_aid`** — DNS-AID / SVCB agent discovery as an injection channel.
 - **`mcp`** — the MCP tool-poisoning variants (v1–v7), including tool-selection
   hijacking (v6) and the codegen-reflex chain (v4), from responsible-disclosure
