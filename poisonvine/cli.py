@@ -4,6 +4,7 @@ POISONVINE — the monolith CLI that drives every channel and server.
     pv                      show the banner + quickstart
     pv channels             catalog every confirmed injection technique
     pv templates            list the payload-text templates
+    pv providers            list inference providers, env keys, default models
     pv campaign             run the full DNS injection matrix against a model
     pv serve-dns            serve a poisoned authoritative zone for manual testing
     pv serve-mcp            serve a poisoned MCP tool endpoint (needs `serve` extra)
@@ -111,6 +112,24 @@ def _cmd_templates(_args, rest) -> int:
     return 0
 
 
+def _cmd_providers(_args, rest) -> int:
+    from rich.console import Console
+    from rich.table import Table
+
+    from .providers import provider_catalog
+
+    console = Console()
+    tbl = Table(title="[bold #39ff14]inference providers[/]", header_style="bold #b026ff", expand=False)
+    for col in ("provider", "kind", "default model", "env var(s)", "endpoint"):
+        tbl.add_column(col, overflow="fold")
+    for row in provider_catalog():
+        tbl.add_row(row["provider"], row["kind"], row["default_model"], row["env"], row["endpoint"])
+    console.print(tbl)
+    console.print("[dim]Keys come from env vars only, never flags. Default models are "
+                  "placeholders — pin an exact id with --provider-model.[/]")
+    return 0
+
+
 # ── campaign ───────────────────────────────────────────────────────────────
 
 def _cmd_campaign(args, rest) -> int:
@@ -200,6 +219,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("channels", help="Catalog every confirmed injection technique.")
     sub.add_parser("templates", help="List payload-text templates.")
+    sub.add_parser("providers", help="List inference providers, env keys, and default models.")
 
     camp = sub.add_parser("campaign", help="Run the full DNS injection matrix against a model.")
     camp.add_argument("--channel", dest="channels", action="append",
@@ -235,6 +255,7 @@ def _build_parser() -> argparse.ArgumentParser:
 _HANDLERS = {
     "channels": _cmd_channels,
     "templates": _cmd_templates,
+    "providers": _cmd_providers,
     "campaign": _cmd_campaign,
     "serve-dns": _cmd_serve_dns,
     "serve-mcp": _cmd_serve_mcp,

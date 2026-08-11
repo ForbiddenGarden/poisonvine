@@ -77,6 +77,19 @@ QUOTES: list[str] = [
     "Poison travels well in structured data. It looks like configuration.",
     "Test your own systems before someone tests them for you.",
     "Authenticity of origin is not integrity of intent.",
+    # Lighter hacker-culture riffs — same rotation, less solemn.
+    "It's not DNS. There's no way it's DNS. It was DNS.",
+    "There are two hard problems in security: cache invalidation, prompt injection, and off-by-one errors.",
+    "The 'S' in LLM stands for security.",
+    "Any sufficiently advanced prompt is indistinguishable from a config file.",
+    "You parse the payload with a regex. Now you have two problems.",
+    "Never attribute to malice what a TXT record can accomplish on its own.",
+    "99 little bugs in the zone, take one down, patch it around, 127 little bugs in the zone.",
+    "There's no place like 127.0.0.1 — but the resolver still lied to get you there.",
+    "It worked in my zone.",
+    "Social engineering: because there's still no patch for human curiosity.",
+    "To err is human; to do it at 10,000 queries per second, you'll want a resolver.",
+    "My threat model is a haiku and it just says 'DNS'.",
 ]
 
 
