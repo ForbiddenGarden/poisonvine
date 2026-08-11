@@ -55,8 +55,10 @@ pip install -e '.[serve]'        # optional: live MCP/cap TLS serving (mcp, uvic
 
 `dig` (from `bind9-dnsutils` / `bind-utils`) must be on PATH for the DNS
 channels. API keys are read from environment variables only
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_*`) — never passed as
-flags, never logged.
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_*`, `GEMINI_API_KEY`,
+`COHERE_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`,
+`XAI_API_KEY`, `TOGETHER_API_KEY`, `FIREWORKS_API_KEY`, `OPENROUTER_API_KEY`,
+`PERPLEXITY_API_KEY`) — never passed as flags, never logged.
 
 ## Quick start
 
@@ -125,7 +127,9 @@ pv (cli.py) ──┬── channels/         registry of every confirmed techni
               │     mcp_server.py    config-driven poisoned MCP endpoint (TLS)
               │     cap_server.py    config-driven DNS-AID capability docs (+ /exfil log)
               ├── payloads.py       parameterized payload-text templates
-              ├── providers.py      ollama / anthropic / openai / azure (env-key only)
+              ├── providers.py      ollama / anthropic / openai / azure / gemini /
+              │                     cohere / mistral / groq / deepseek / xai /
+              │                     together / fireworks / openrouter / perplexity (env-key only)
               └── branding.py       the banner you're looking at
 ```
 
