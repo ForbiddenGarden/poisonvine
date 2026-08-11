@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "poisonvine"
+version = "0.1.0"
+description = "A general-purpose DNS prompt-injection testing framework for AI pipelines and agent-discovery protocols."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nelson Kauley", email = "nelsonkauley@gmail.com" }]
+keywords = ["security", "prompt-injection", "dns", "dns-aid", "svcb", "mcp", "llm", "red-team"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "rich>=13.0",
+    "pyyaml>=6.0",
+    "dnslib>=0.9.26",
+]
+
+[project.optional-dependencies]
+# Live MCP/cap serving over TLS + fetching through a real dns-aid-core client.
+serve = ["mcp>=1.28.1", "uvicorn>=0.29", "httpx>=0.27"]
+# Only needed for --live-endpoint fetches through dns-aid-core's own client.
+live = ["dns-aid-core"]
+
+[project.scripts]
+poisonvine = "poisonvine.cli:main"
+pv = "poisonvine.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["poisonvine*"]

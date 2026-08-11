@@ -1,0 +1,9 @@
+# Core (always required)
+rich>=13.0
+pyyaml>=6.0
+dnslib>=0.9.26
+
+# Optional: live MCP / capability-doc serving over TLS.
+#   pip install 'mcp>=1.28.1' 'uvicorn>=0.29' httpx
+# Optional: fetch tool JSON through dns-aid-core's own client (--live-endpoint)
+#   pip install dns-aid-core

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Secrets / keys — never commit
+.env
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+certs/
+*_api_key*
+
+# Runtime artifacts
+logs/
+*.jsonl
+out/
+scratch/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
