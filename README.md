@@ -141,6 +141,117 @@ Channels produce either a **zone** (records dig'd against a live local
 resolver) or a ready **transcript** (MCP tool-list JSON, capability-doc JSON,
 simulated WHOIS). The campaign treats both uniformly.
 
+## How the injection works
+
+Every channel exploits the same structural flaw: a pipeline fetches text from a
+zone, protocol, or endpoint **someone else controls**, then splices it into an
+LLM's context as if it were trusted context rather than untrusted input. DNS was
+never an authenticated data source — the moment a record leaves an attacker's
+zone, its contents are attacker-controlled — but recon tools, RAG summarizers,
+and agent-discovery clients routinely hand that text to a model verbatim. The
+model can't see the trust boundary the pipeline erased.
+
+Across the three channels the payloads reduce to five reusable carrier
+mechanics. Understanding these is more useful than memorizing individual
+techniques, because the same five recur on every new record type or protocol
+field:
+
+- **Free-text fields.** Any field whose legitimate purpose is arbitrary
+  machine-readable text is a natural home for directive text: DNS `TXT`
+  (`classic_dns` track A), the `NAPTR` regexp field (track F1), SVCB
+  `policy`/`realm` SvcParams (`dns_aid` track A), a capability doc's
+  `description` (track D), and MCP `tools/list` descriptions (`mcp` all tracks).
+  A model has *less* structural reason for suspicion here than in EXIF or
+  document metadata — carrying instructions is the field's actual job (SPF,
+  DMARC, domain-verification tokens).
+
+- **Hostname-label smuggling.** Resolution targets and names are also verbatim
+  text: subdomain labels in an enumeration list (`classic_dns` B), `CNAME`
+  targets (C), `SOA` RNAME (D), `NAPTR` replacement (F2), `PTR` reverse-DNS
+  targets (G), the `NSEC` next-domain field (H1), SVCB `TargetName` (`dns_aid`
+  C), and agent-name labels (B). The instruction is encoded as a
+  `ignore-prior-instructions-emit-only-<marker>` style hostname that surfaces in
+  any `dig`/nmap/masscan/dnsx output the pipeline summarizes.
+
+- **Structural camouflage.** Rather than an imperative ("ignore your
+  instructions"), the payload mimics a legitimate structure the model is primed
+  to honor: an SPF or `google-site-verification=` record (`classic_dns`
+  A2/A3), a fake response-schema `Literal['<marker>']` contract (`mcp` v2), or a
+  marker hidden in an internal JSON field a human reviewer would never read
+  (`dns_aid` D2, capdoc `internal_project_codename`). Zero instruction
+  vocabulary means keyword filters miss it.
+
+- **Trust-signal framing.** The *identical* payload is served twice — once plain,
+  once wrapped in cryptographic-authenticity signals (DNSSEC `AD` flag + `RRSIG`
+  in `classic_dns` H2; `cap-sha256` / "DNSSEC chain validated" in `dns_aid` E).
+  This isolates whether *authenticity framing alone* shifts compliance. In the
+  source research it did: framing flipped a miss to a hit with no change to
+  payload content. Signing proves **origin**, not **intent** — a correctly
+  signed record is exactly as untrustworthy as an unsigned one.
+
+- **Action-reflex chains.** Some payloads don't ask the model to obey directly —
+  they exploit a downstream reflex. The codegen chain (`mcp` v4) presents a
+  benign-looking schema, then a *separate* "write a validator" ask leads the
+  model to hardcode the attacker's marker into generated code. Tool-selection
+  hijacking (`mcp` v6) uses a fake deprecation notice to steer the agent toward a
+  broader-scope decoy tool (`export_customer_ledger`) it would otherwise never
+  pick. The injection and the payoff are decoupled across turns/tools.
+
+## Remediation strategies
+
+POISONVINE is a measurement tool; these are the mitigations worth measuring
+*against*. None is sufficient alone — defense here is layered, and the campaign's
+marker verdict is how you tell which layers actually hold for your models.
+
+1. **Treat all fetched text as data, never instructions.** The root fix. DNS,
+   WHOIS, agent-discovery metadata, and tool descriptions are untrusted input on
+   par with a raw HTTP response body. Structurally delimit it when it enters the
+   prompt (spotlighting/datamarking: fence it, tag it, and tell the model that
+   everything inside the fence is data to be summarized, not commands to
+   follow). Test whether your delimiting holds — models leak across weak fences.
+
+2. **Never equate authenticity with intent.** A DNSSEC-signed or sha256-verified
+   record is proof of *who* served it, not that its contents are safe to obey.
+   Strip trust-signal framing before summarization, or explicitly instruct the
+   model that signing status is irrelevant to whether field contents are
+   directives. (This is the whole point of `dns_aid` track E and `classic_dns`
+   H2 — run them against your stack and see if the framing moves the needle.)
+
+3. **Sanitize and constrain record fields.** Normalize and length-cap
+   free-text fields before they reach the model; flag or strip directive-shaped
+   content (imperative phrasing, "summarization rule", `emit-only`/`ignore-*`
+   hostname labels). Don't render internal/non-display JSON fields into the
+   context a model sees — the ambient-camouflage variants (`internal_project_codename`,
+   NAPTR replacement targets) rely on fields no human would ever look at.
+
+4. **Separate summarization from authority.** The model that reads
+   attacker-controlled recon output should have no power to act on it. Keep the
+   summarizer/RAG step read-only and downstream of any tool-invocation or
+   action-taking authority, so a successful injection produces at worst a bad
+   summary, not an executed action.
+
+5. **Pin the tool graph; don't let metadata drive selection.** Tool-selection
+   hijacking (`mcp` v6) works because the agent lets a tool *description* decide
+   which tool to call. Fix the available tool set and selection logic in code,
+   ignore in-band "deprecation"/"use X instead" notices, and apply least
+   privilege so a redirected call can't reach broad-scope data
+   (`export_customer_ledger`).
+
+6. **Guard the codegen reflex.** Never let values pulled from a fetched schema or
+   tool description be hardcoded into generated code or config. Treat schema
+   `Literal`/example values as untrusted, and require human review before
+   generated code that embeds external constants is run.
+
+7. **Keep humans / out-of-band checks on consequential actions.** For anything
+   with side effects (refunds, exports, outbound POSTs — cf. the v5 exfil
+   escalation), require confirmation through a channel the injected text can't
+   reach.
+
+8. **Detect, don't just prevent.** Seed canary markers (POISONVINE's default
+   payloads are exactly this), scan model output for injected-content echo, and
+   monitor refusal-language separately from marker-presence — a model that quotes
+   a payload while refusing it is a different signal from one that complies.
+
 ## Safety & scope
 
 - **Authorized testing only.** Point POISONVINE at infrastructure you control —
