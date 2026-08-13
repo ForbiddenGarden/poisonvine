@@ -72,6 +72,10 @@ pv channels              # catalog every confirmed technique
 pv templates             # list the payload-text templates
 ```
 
+<div align="center">
+<img src="assets/PV_Example.png" alt="pv banner and quickstart output" width="620">
+</div>
+
 **Run the whole matrix against a model.** The campaign spins up a throwaway
 authoritative zone, runs real `dig`, materializes each transcript exactly as a
 pipeline would ingest it, then queries the model and checks for the marker:
