@@ -28,7 +28,7 @@ CHANNELS = {
 CHANNEL_TITLES = {
     "classic_dns": "Classic DNS / WHOIS records",
     "dns_aid": "DNS-AID / SVCB agent discovery",
-    "mcp": "MCP tool-poisoning over discovered endpoints (v1–v7)",
+    "mcp": "MCP tool-poisoning over discovered endpoints (14 techniques)",
 }
 
 

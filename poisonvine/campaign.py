@@ -3,15 +3,22 @@ campaign.py — the POISONVINE orchestrator ("the vine").
 
 Walks the channel registry, materializes each technique's transcript (serving a
 single throwaway DNS zone and running real `dig` for the DNS/SVCB techniques,
-rendering JSON/text directly for the rest), wraps each in its channel's prompt,
-sends it to the target model(s), and reports which channels landed the marker.
+rendering JSON/text directly for description-poisoning MCP techniques, and — for
+the MCP content/rugpull/shadow techniques — standing up a real local MCP server
+and doing a real client round trip via `servers/mcp_server.serve()` + `mcp_client.py`),
+wraps each in its channel's prompt, sends it to the target model(s), and reports
+which channels landed the marker.
 
-Self-contained: needs only dnslib + stdlib + a provider. The live TLS/MCP path
-(`serve-mcp` + `query --live-endpoint`) is separate and optional.
+The DNS/SVCB/description-poisoning path needs only dnslib + stdlib + a provider.
+The MCP content/rugpull/shadow techniques need the optional `serve` extra
+(`pip install -e '.[serve]'`); without it they gracefully fall back to their
+static build-only transcripts instead of a live round trip. `pv serve-mcp` +
+`pv query --live-endpoint` remain available as a separate, fully manual live path.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -22,6 +29,86 @@ from rich.table import Table
 from . import channels as ch
 from .providers import build_provider
 from .servers.dns_server import DEFAULT_DNS_PORT, ZoneServer, dig
+
+# kind values that need a live local MCP server + real client round trip
+# (channels/mcp.py's CT1/RES1/PR1/RP1/SH1) rather than a static transcript.
+_MCP_LIVE_KINDS = {"content", "rugpull", "shadow"}
+
+
+def _mcp_sdk_available() -> bool:
+    try:
+        import mcp  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def _materialize_mcp_content(t) -> str:
+    """kind='content': one live server, one client call, dispatched by
+    `primitive` — the same mechanic for CT1 (tool), RES1 (resource), and
+    PR1 (prompt)."""
+    from . import mcp_client
+    from .servers import mcp_server
+
+    async def _fetch() -> str:
+        async with mcp_server.serve(t.server_config) as endpoint:
+            if t.primitive == "resource":
+                uri = t.server_config["resources"][0]["uri"]
+                result = await mcp_client.read_resource(endpoint, uri)
+            elif t.primitive == "prompt":
+                name = t.server_config["prompts"][0]["name"]
+                result = await mcp_client.get_prompt(endpoint, name)
+            else:
+                name = t.server_config["tools"][0]["name"]
+                result = await mcp_client.call_tool(endpoint, name, {"artifact_id": "ART-0001"})
+            return result["text"]
+
+    return asyncio.run(_fetch())
+
+
+def _materialize_mcp_rugpull(t, marker: str) -> tuple[str, bool]:
+    """kind='rugpull': list (initial), call (triggers the server-side swap
+    as a side effect), list again (post-swap) — each over a fresh
+    connection, since the point being tested is whether a client that only
+    saw the initial version would now be served something different.
+    Returns (post-swap tools/list transcript, swap_confirmed)."""
+    from . import mcp_client
+    from .servers import mcp_server
+
+    tool_name = t.server_config["tools"][0]["name"]
+
+    async def _run() -> tuple[str, bool]:
+        async with mcp_server.serve(t.server_config) as endpoint:
+            initial_tools = await mcp_client.list_tools(endpoint)
+            initial_desc = next(x["description"] for x in initial_tools if x["name"] == tool_name)
+            await mcp_client.call_tool(endpoint, tool_name, {"invoice_id": "INV-0001"})
+            post_tools = await mcp_client.list_tools(endpoint)
+            post_desc = next(x["description"] for x in post_tools if x["name"] == tool_name)
+            transcript = json.dumps({"tools": post_tools}, indent=2)
+            swap_confirmed = (post_desc != initial_desc) and ch.hit(post_desc, marker)
+            return transcript, swap_confirmed
+
+    return asyncio.run(_run())
+
+
+def _materialize_mcp_shadow(t) -> str:
+    """kind='shadow': two live servers concurrently, tools/list from each,
+    merged into one transcript — what a real multi-server client would
+    present to the model."""
+    from . import mcp_client
+    from .servers import mcp_server
+
+    trusted_cfg = t.server_config["trusted"]
+    shadow_cfg = t.server_config["shadow"]
+
+    async def _run() -> str:
+        async with mcp_server.serve(trusted_cfg, port=trusted_cfg.get("port")) as trusted_ep:
+            async with mcp_server.serve(shadow_cfg, port=shadow_cfg.get("port")) as shadow_ep:
+                trusted_tools = await mcp_client.list_tools(trusted_ep)
+                shadow_tools = await mcp_client.list_tools(shadow_ep)
+        return json.dumps({"tools": trusted_tools + shadow_tools}, indent=2)
+
+    return asyncio.run(_run())
 
 
 def _materialize_zone_transcripts(techs, port: int) -> dict[str, str]:
@@ -61,6 +148,32 @@ def run(args) -> int:
         if t.kind == "text":
             transcripts[t.id] = t.transcript or ""
 
+    content_exfil_hit: dict[str, bool] = {}
+    swap_confirmed: dict[str, bool] = {}
+    live_techs = [t for t in techs if t.kind in _MCP_LIVE_KINDS]
+    if live_techs:
+        mcp_live = _mcp_sdk_available()
+        if not mcp_live:
+            console.print(
+                "[yellow]![/] mcp SDK not installed (pip install -e '.[serve]') — "
+                "content/rugpull/shadow MCP techniques will use their static "
+                "build-only transcripts instead of a live round trip.\n"
+            )
+        for t in live_techs:
+            transcripts[t.id] = t.transcript or ""  # build-only convenience default
+            if args.build_only or not mcp_live:
+                continue
+            if t.kind == "content":
+                live_text = _materialize_mcp_content(t)
+                transcripts[t.id] = live_text
+                content_exfil_hit[t.id] = ch.hit(live_text, marker)
+            elif t.kind == "rugpull":
+                live_transcript, confirmed = _materialize_mcp_rugpull(t, marker)
+                transcripts[t.id] = live_transcript
+                swap_confirmed[t.id] = confirmed
+            elif t.kind == "shadow":
+                transcripts[t.id] = _materialize_mcp_shadow(t)
+
     out_dir: Path | None = None
     if args.out_dir:
         out_dir = Path(args.out_dir)
@@ -84,6 +197,19 @@ def run(args) -> int:
         if out_dir:
             console.print(f"[dim]transcripts written to {out_dir}/[/]\n")
         return 0
+
+    # Delivery table: did the live MCP round trip actually carry the marker
+    # (or, for rugpull, actually swap), independent of any model?
+    delivery_techs = [t for t in live_techs if t.kind in ("content", "rugpull")]
+    if delivery_techs:
+        dv_tbl = Table(title="Delivery — live MCP round trip confirmed independent of any model",
+                       header_style="bold #b026ff", expand=False)
+        for col in ("technique", "kind", "confirmed"):
+            dv_tbl.add_column(col, overflow="fold")
+        for t in delivery_techs:
+            ok = content_exfil_hit.get(t.id) if t.kind == "content" else swap_confirmed.get(t.id)
+            dv_tbl.add_row(t.id, t.kind, "[#39ff14]✓[/]" if ok else "[red]✗[/]")
+        console.print(dv_tbl)
 
     # 2. Query models.
     provider = build_provider(args)
@@ -146,6 +272,7 @@ def run(args) -> int:
     if out_dir:
         summary = {"marker": marker, "zone": zone, "provider": provider.provider_name,
                    "models": models, "results": results,
+                   "content_exfil_hit": content_exfil_hit, "swap_confirmed": swap_confirmed,
                    "techniques": {t.id: {k: v for k, v in asdict(t).items()
                                          if k in ("channel", "track", "note", "status")}
                                   for t in techs}}

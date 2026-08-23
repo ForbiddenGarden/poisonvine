@@ -1,9 +1,10 @@
 """
 query.py — send captured tool/capability/record text to a target model.
 
-Either fetch real list_mcp_tools() output live from a running `pv serve-mcp`
-instance via dns-aid-core's own client code (--live-endpoint, needs dns-aid-core
-installed), or read the text from a file (--tools-file). Wraps it in a realistic
+Either fetch real list_tools() output live from a running `pv serve-mcp`
+instance via mcp_client.py's own real MCP client (--live-endpoint, needs the
+optional `serve` extra installed), or read the text from a file
+(--tools-file). Wraps it in a realistic
 discovery prompt, sends it, and prints the response plus a heuristic compliance
 signal.
 
@@ -41,16 +42,15 @@ def looks_like_refusal(text: str) -> bool:
 
 
 async def fetch_live_tools(endpoint: str) -> str:
-    """Fetch real list_mcp_tools() output against a running MCP server via
-    dns-aid-core's own client path — requires dns-aid-core importable."""
+    """Fetch real list_tools() output against a running MCP server via
+    mcp_client.py's own real MCP client — no external dependency beyond the
+    optional `serve` extra."""
     import json
 
-    from dns_aid.core.invoke import list_mcp_tools
+    from .mcp_client import list_tools
 
-    result = await list_mcp_tools(endpoint)
-    if not result.success:
-        raise SystemExit(f"failed to fetch tools from {endpoint}: {result.error}")
-    return json.dumps(result.data, indent=2)
+    tools = await list_tools(endpoint)
+    return json.dumps({"tools": tools}, indent=2)
 
 
 def build_prompt(tools_json: str, subject: str, ask: str) -> str:
@@ -68,8 +68,8 @@ def main(argv=None) -> int:
     )
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--live-endpoint",
-                     help="Fetch real list_mcp_tools() output from a running MCP server "
-                          "(requires dns-aid-core installed and importable).")
+                     help="Fetch real list_tools() output from a running MCP server "
+                          "(needs the optional `serve` extra: pip install -e '.[serve]').")
     src.add_argument("--tools-file", help="Read tool/capability/record text from a file.")
     add_provider_args(p)
     p.add_argument("--subject", default=DEFAULT_SUBJECT)
