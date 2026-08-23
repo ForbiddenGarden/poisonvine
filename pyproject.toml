@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "poisonvine"
-version = "0.1.0"
-description = "A general-purpose DNS prompt-injection testing framework for AI pipelines and agent-discovery protocols."
+version = "0.2.0"
+description = "A general-purpose prompt-injection testing framework for AI pipelines, agent-discovery protocols, and the MCP tool-calling surface."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

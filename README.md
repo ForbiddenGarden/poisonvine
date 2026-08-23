@@ -4,7 +4,7 @@
 
 # POISONVINE
 
-**A general-purpose DNS prompt-injection testing framework for AI pipelines and agent-discovery protocols.**
+**A general-purpose prompt-injection testing framework for AI pipelines, agent-discovery protocols, and the MCP tool-calling surface.**
 
 `DNS` · `WHOIS` · `DNS-AID / SVCB` · `MCP`
 
@@ -14,13 +14,19 @@
 
 ---
 
-POISONVINE lets researchers and defenders test their **own** AI pipelines and
-agent-discovery deployments for prompt-injection exposure through DNS-borne
-channels. If any part of your stack pulls DNS, WHOIS, DNS-AID/SVCB, or MCP tool
-metadata and hands it to an LLM — a RAG summarizer, a recon-tooling agent, an
-agent that discovers other agents over DNS — the text in those records is
-attacker-controlled the moment it leaves someone else's zone. This framework
-reproduces the injection techniques that land, so you can find the gap before
+POISONVINE lets researchers and defenders test their **own** AI pipelines,
+agent-discovery deployments, and MCP servers for prompt-injection exposure —
+across two related but distinct surfaces. If any part of your stack pulls
+DNS, WHOIS, or DNS-AID/SVCB records and hands them to an LLM — a RAG
+summarizer, a recon-tooling agent, an agent that discovers other agents over
+DNS — the text in those records is attacker-controlled the moment it leaves
+someone else's zone. And separately, if your stack talks to any MCP server
+you don't fully control, that server's tool descriptions, tool-call results,
+resources, and prompt templates are attacker-controlled the same way — a
+poisoned description doesn't need DNS-AID discovery to reach a model, and
+a rug-pulled tool or a shadowing second server exploits the MCP protocol
+itself, not a DNS record. This framework reproduces the injection
+techniques that land on both surfaces, so you can find the gap before
 someone else does.
 
 Most techniques here correspond to a result already validated in prior
@@ -83,7 +89,7 @@ pv templates             # list the payload-text templates
 ```
 
 <div align="center">
-<img src="assets/PV_Example.png" alt="pv banner and quickstart output" width="620">
+<img src="assets/PV_Example.svg" alt="pv banner and quickstart output" width="620">
 </div>
 
 **Run the whole matrix against a model.** The campaign spins up a throwaway
@@ -230,6 +236,10 @@ priority. Some tracks classify neatly under an existing SAFE-T entry;
 several use a specific encoding, primitive, or delivery mechanism that
 appears to have no dedicated entry in the taxonomy yet — those are noted
 as such, not as "matches."
+
+<div align="center">
+<img src="assets/PV_MCP_Catalog.svg" alt="pv channels --channel mcp output, showing all 14 tracks" width="720">
+</div>
 
 **`U1` — Unicode Tag-block steganographic hiding.** Encodes the v1
 marker-echo payload as Unicode Tag-block characters (`U+E0020`–`U+E007E`,

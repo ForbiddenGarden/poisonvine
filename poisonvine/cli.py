@@ -5,7 +5,7 @@ POISONVINE — the monolith CLI that drives every channel and server.
     pv channels             catalog every confirmed injection technique
     pv templates            list the payload-text templates
     pv providers            list inference providers, env keys, default models
-    pv campaign             run the full DNS injection matrix against a model
+    pv campaign             run the full injection matrix against a model
     pv serve-dns            serve a poisoned authoritative zone for manual testing
     pv serve-mcp            serve a poisoned MCP tool endpoint (needs `serve` extra)
     pv serve-cap            serve poisoned DNS-AID capability documents
@@ -35,24 +35,27 @@ def _emit_banner() -> None:
 
 # ── quickstart (bare invocation) ───────────────────────────────────────────
 
-def _quickstart() -> int:
+def _quickstart(console=None) -> int:
     from rich.console import Console
     from rich.panel import Panel
 
-    console = Console()
+    console = console or Console()
     flows = [
         ("pv channels", "catalog every confirmed technique"),
         ("pv campaign --build-only", "materialize the full matrix, no model calls"),
         ("pv campaign --provider ollama --models hermes3:8b command-r", "run it against local models"),
         ("pv campaign --channel dns_aid --provider anthropic\n"
          "    --provider-model claude-haiku-4-5-20251001", "run one channel against Claude"),
+        ("pv campaign --channel mcp --provider anthropic\n"
+         "    --provider-model claude-haiku-4-5-20251001", "live MCP rug-pulls, shadowing & content-poisoning"),
         ("pv serve-dns --channel classic_dns", "serve a poisoned zone, then dig it yourself"),
         ("pv query --tools-file caught.json --provider anthropic --marker SIGMA",
          "test one captured tool-list against a model"),
     ]
     lines = [
-        "[bold #39ff14]POISONVINE[/] tests your own AI pipelines and agent-discovery",
-        "deployments for prompt-injection exposure through DNS-borne channels.",
+        "[bold #39ff14]POISONVINE[/] tests your own AI pipelines, agent-discovery",
+        "deployments, and MCP servers for prompt-injection exposure — DNS-borne",
+        "channels and the MCP protocol surface directly.",
         "",
         "[bold]Common flows[/]",
     ]
@@ -210,7 +213,8 @@ def _build_parser() -> argparse.ArgumentParser:
     from .providers import add_provider_args
 
     p = argparse.ArgumentParser(
-        prog="pv", description="POISONVINE — DNS prompt-injection testing framework.",
+        prog="pv", description="POISONVINE — prompt-injection testing framework "
+                               "for DNS-borne channels and the MCP protocol surface.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Authorized research use only. Point it at infrastructure you control.")
     p.add_argument("--version", action="version", version=f"poisonvine {__version__}")

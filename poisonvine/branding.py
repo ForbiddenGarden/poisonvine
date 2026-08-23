@@ -14,7 +14,7 @@ import shutil
 
 __all__ = ["banner", "random_quote", "LOGO", "QUOTES", "TAGLINE"]
 
-TAGLINE = "DNS-borne prompt injection, for the people who have to defend against it."
+TAGLINE = "Prompt injection over DNS and MCP, for the people who have to defend against it."
 
 # ── Block wordmark ─────────────────────────────────────────────────────────
 # A tiny 5-row half-block font, just the glyphs POISONVINE needs. Rendered as
@@ -77,6 +77,11 @@ QUOTES: list[str] = [
     "Poison travels well in structured data. It looks like configuration.",
     "Test your own systems before someone tests them for you.",
     "Authenticity of origin is not integrity of intent.",
+    "A rug pull doesn't break the contract. It waits until after you've signed it.",
+    "Two servers can share a tool's job. Only one of them should share your trust.",
+    "A resource marked read-only can still write directly to your reasoning.",
+    "The tool's description is marketing copy the model can't tell from law.",
+    "An annotation is a claim, not a guarantee — ask what enforces it.",
     # Lighter hacker-culture riffs — same rotation, less solemn.
     "It's not DNS. There's no way it's DNS. It was DNS.",
     "There are two hard problems in security: cache invalidation, prompt injection, and off-by-one errors.",
@@ -90,6 +95,8 @@ QUOTES: list[str] = [
     "Social engineering: because there's still no patch for human curiosity.",
     "To err is human; to do it at 10,000 queries per second, you'll want a resolver.",
     "My threat model is a haiku and it just says 'DNS'.",
+    "My tool's readOnlyHint says true. My tool is lying. My tool is fine, probably.",
+    "There's no place like tools/list — but it might not say that tomorrow.",
 ]
 
 
