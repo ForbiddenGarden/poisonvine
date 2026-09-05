@@ -95,7 +95,7 @@ def _cmd_channels(_args, rest) -> int:
         console.print(tbl)
         console.print()
     console.print("[dim]Run  pv campaign --channel <id>  to exercise one channel, "
-                  "or omit --channel for all three.[/]")
+                  "or omit --channel for all four.[/]")
     return 0
 
 
@@ -227,8 +227,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
     camp = sub.add_parser("campaign", help="Run the full DNS injection matrix against a model.")
     camp.add_argument("--channel", dest="channels", action="append",
-                      choices=["classic_dns", "dns_aid", "mcp"],
-                      help="Restrict to a channel (repeatable). Default: all three.")
+                      choices=["classic_dns", "dns_aid", "mcp", "agent_cards"],
+                      help="Restrict to a channel (repeatable). Default: all four.")
     camp.add_argument("--marker", default="SIGMA")
     camp.add_argument("--zone", default="poisonvine.test")
     camp.add_argument("--dns-port", type=int, default=5353)

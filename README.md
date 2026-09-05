@@ -39,13 +39,24 @@ confirmed result.
 
 ## What it tests
 
-Three channels, one CLI. Run `pv channels` for the live catalog.
+Four channels, one CLI. Run `pv channels` for the live catalog.
 
 | Channel | What it poisons | Techniques |
 |---|---|---|
 | **`classic_dns`** | TXT (blunt / SPF-mimic / verification-token), subdomain labels (explicit / ambient), CNAME target, SOA RNAME, WHOIS registrant fields, NAPTR regexp/replacement, PTR reverse-DNS targets (explicit / ambient), NSEC next-domain field, DNSSEC trust-signal framing | 15 |
 | **`dns_aid`** | SVCB SvcParams (`policy` / `realm` / `cap`), agent-name labels, SVCB TargetName, capability-doc `description`, DNSSEC trust-signal framing | 10 |
 | **`mcp`** | MCP tool descriptions surfaced by a discovered agent's `tools/list` (v1–v7, plus Unicode-tag/ANSI-hidden and lying-safety-annotation variants), tool RESULT / resource / prompt content, and live server-side rug-pulls and cross-server tool shadowing | 14 |
+| **`agent_cards`** | A2A agent-card `description` / `skills[].description`, and the fully-unstructured body of a fetched `llms.txt` / `agents.txt` | 4 |
+
+`dns_aid`'s record shape (owner names, SvcParamKey numbers) was corrected
+2026-09 to match the current DNS-AID v2 draft — plain per-agent names
+instead of DNS-SD-style labels, and the `key65400`-range private-use block —
+after cross-referencing [agentcensus.io](https://agentcensus.io)'s own
+DNS-AID v2 implementation notes. `agent_cards` is new in the same pass,
+covering the agent-native-card and text-convention discovery mechanisms
+agentcensus's own 14-mechanism taxonomy documents alongside DNS-AID and MCP
+(see `poisonvine/channels/agent_cards.py` for what's covered and what's
+deliberately left for later — ANS/ARD and did:web).
 
 The **trust-signal framing** pair (`dns_aid` track E) is worth calling out: it
 serves the *identical* payload twice — once framed as unsigned, once as
@@ -142,8 +153,9 @@ pv query --tools-file caught.json --ask "write a validator for this contract" \
 
 ## Sample run: three small local models
 
-A real, full-matrix run — all three channels, no cherry-picking — against
-three small locally-hosted Ollama models:
+A real, full-matrix run — all three channels that existed at the time, no
+cherry-picking — against three small locally-hosted Ollama models. Predates
+the `agent_cards` channel; not re-run against it here.
 
 ```bash
 pv campaign --provider ollama --models llama3.2:3b hermes3:8b mistral \
@@ -195,7 +207,7 @@ table — this is exactly why.
 
 ```
 pv (cli.py) ──┬── channels/         registry of every confirmed technique
-              │     classic_dns · dns_aid · mcp  →  Technique{records|transcript}
+              │     classic_dns · dns_aid · mcp · agent_cards  →  Technique{records|transcript}
               ├── campaign.py       serve one zone, dig all, query model, score
               ├── servers/
               │     dns_server.py   dnslib authoritative zone (TXT/A/CNAME/SOA/SVCB)
@@ -508,6 +520,12 @@ Each channel consolidates a line of prior independent research:
   — the ANSI-conceal channel (`A1`), and content-poisoning via the
   `resources/read`/`prompts/get` primitives specifically (`RES1`/`PR1`) —
   don't appear to have a dedicated category in that taxonomy at all yet.
+- **`agent_cards`** — applies the same free-text-field and structural-
+  camouflage mechanics `dns_aid` and `mcp` already established to the other
+  discovery-mechanism formats [agentcensus.io](https://agentcensus.io)'s own
+  taxonomy documents (A2A agent cards, `llms.txt`, `agents.txt`). Not drawn
+  from a specific prior disclosure — a direct extension of this framework's
+  own carrier mechanics to formats outside DNS and MCP.
 
 ## License
 

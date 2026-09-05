@@ -37,12 +37,20 @@ QTYPE.reverse["SVCB"] = 64
 # Standard SvcParamKeys (RFC 9460 §14.3.2)
 KEY_ALPN = 1
 KEY_PORT = 3
-# DNS-AID params — no IANA assignment yet; pinned into the private-use range.
-KEY_CAP = 65280
-KEY_CAP_SHA256 = 65281
-KEY_BAP = 65282
-KEY_POLICY = 65283
-KEY_REALM = 65284
+# DNS-AID params (draft-mozleywilliams-dnsop-dnsaid-02 §7.1: cap, cap-sha256,
+# policy, realm, well-known, bap). The draft defers numeric assignment to
+# IANA rather than fixing it in the text, so there is no canonical value to
+# match — these are pinned into the RFC 9460 private-use range at 65400-65405,
+# the same key65400-key65409 block agentcensus.io's own crawler documents
+# testing DNS-AID v2 providers against (see its /docs/agent and
+# /census/methodology pages), for realism against what that block actually
+# looks like in the wild rather than an arbitrary private-use choice.
+KEY_CAP = 65400
+KEY_CAP_SHA256 = 65401
+KEY_POLICY = 65402
+KEY_REALM = 65403
+KEY_WELL_KNOWN = 65404
+KEY_BAP = 65405
 
 
 def fqdn(label: str, zone: str = DEFAULT_ZONE) -> str:

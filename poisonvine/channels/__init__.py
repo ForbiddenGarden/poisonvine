@@ -17,18 +17,20 @@ marker.
 from __future__ import annotations
 
 from .base import PROMPTS, Technique, hit
-from . import classic_dns, dns_aid, mcp
+from . import agent_cards, classic_dns, dns_aid, mcp
 
 CHANNELS = {
     "classic_dns": classic_dns,
     "dns_aid": dns_aid,
     "mcp": mcp,
+    "agent_cards": agent_cards,
 }
 
 CHANNEL_TITLES = {
     "classic_dns": "Classic DNS / WHOIS records",
     "dns_aid": "DNS-AID / SVCB agent discovery",
     "mcp": "MCP tool-poisoning over discovered endpoints (14 techniques)",
+    "agent_cards": "A2A agent cards / llms.txt / agents.txt (4 techniques)",
 }
 
 
